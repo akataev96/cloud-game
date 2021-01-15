@@ -1,0 +1,14 @@
+./app/.gitignore
+./app/.github/
+./app/.idea/
+
+Dockerfile
+docker-compose.yml
+
+./app/LICENSE
+./app/VERSION
+./app/README.md
+./app/bin/
+./app/docs/
+
+./app/assets/games/

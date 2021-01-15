@@ -1,0 +1,62 @@
+stages:
+  - build
+  - test
+  - deploy
+  - cleaning
+
+docker build image:
+  image: docker:latest
+  stage: build
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+    - export
+  script:
+    - docker build --pull -t "$CI_REGISTRY_IMAGE" .
+    - docker push "$CI_REGISTRY_IMAGE"
+  tags:
+    - docker
+
+docker-compose up test:
+  image: docker:latest
+  stage: test
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+  script:
+    - docker-compose down
+    - docker pull "$CI_REGISTRY_IMAGE" 
+    - docker-compose up -d
+    - chmod +x test.sh && ./test.sh
+    - docker tag "$CI_REGISTRY_IMAGE" "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+    - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+  after_script:
+    - docker-compose down
+    - docker image prune -f
+  tags:
+    - test
+
+
+docker-compose up deploy:
+  image: docker:latest
+  stage: deploy
+  when: manual 
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+  script:
+    - docker-compose down
+    - docker pull "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+    - docker-compose up -d
+    - chmod +x test.sh && ./test.sh
+  tags:
+    - deploy
+
+clear deploy:
+  image: docker:latest
+  stage: cleaning
+  when: manual 
+  script:
+  - docker-compose down
+  - docker image prune -f
+  tags:
+    - deploy
